@@ -147,7 +147,6 @@ class Chromosome(private val problem: Problem) {
             var index = Random.nextInt(0, list.size)
             val startIndex = index
             while (problem.customers[c].quantityDemand + getVehicleLoad(index) > problem.maxVehicleLoad) {
-                // TODO: if no route has capacity, this will go on indefinitely
                 if (index == list.size-1) index = 0; else index += 1
                 if (index == startIndex) {
                     println("Chromosome.randomInitialization failed, not room on any routes")

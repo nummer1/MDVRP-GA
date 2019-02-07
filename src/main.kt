@@ -7,7 +7,7 @@
 
 
 fun main(args: Array<String>) {
-    val p01 = Problem("data_files/p09")
+    val p01 = Problem("data_files/p10")
     val population = Population(p01, 400)
     population.randomInitialization()
 
@@ -15,7 +15,7 @@ fun main(args: Array<String>) {
     println("Min:cost: ${population.getFittest().getCost()}")
     var i = 0
     while (true) {
-        population.createNewFitProp(0.0, 1.0, 4)
+        population.createNewFitProp(0.8, 0.2, 4)
         println(i)
         println("Average:cost: ${population.getAverageCost()}")
         println("Min:cost: ${population.getFittest().getCost()}")
