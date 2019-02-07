@@ -35,42 +35,51 @@ class Population(val problem: Problem, var populationSize: Int) {
         for (j in 0.until(populationSize/2 - elitistCount/2)) {
             val ind1Val = Random.nextDouble(0.0, totalFitness)
             val ind2Val = Random.nextDouble(0.0, totalFitness)
-            var ind1 = Chromosome(problem)
-            var ind2 = Chromosome(problem)
+            var ind1: Chromosome? = null
+            var ind2: Chromosome? = null
+            val ind1_copy = Chromosome(problem)
+            val ind2_copy = Chromosome(problem)
             var chosenInd1 = false
             var chosenInd2 = false
             for (i in 0.until(population.size)) {
                 if (ind1Val < cumulativeFitness[i] && !chosenInd1) {
-                    ind1.copyOf(population[i])
+                    ind1 = population[i]
+                    ind1_copy.copyOf(population[i])
                     chosenInd1 = true
                 }
                 if (ind2Val < cumulativeFitness[i] && !chosenInd2) {
-                    ind2.copyOf(population[i])
+                    ind2 = population[i]
+                    ind2_copy.copyOf(population[i])
                     chosenInd2 = true
                 }
                 if (chosenInd1 && chosenInd2) {
                     break
                 }
             }
-            while (ind1 == ind2) {
-                ind2 = population.random()
-            }
+//            while (ind1 == ind2) {
+//                ind2.copyOf(population.random())
+//            }
 
             // do crossover
             if (Random.nextDouble(0.0, 1.0) < crossoverRate) {
-                ind1.crossoverRouteReassignment(ind1, ind2)
+                if (!ind1_copy.crossoverRouteReassignment(ind2_copy)) {
+                    ind1_copy.randomInitialization()
+                    ind2_copy.randomInitialization()
+//                    ind1_copy.copyOf(ind1!!)
+//                    ind2_copy.copyOf(ind2!!)
+                }
             }
 
             // do mutation
             if (Random.nextDouble(0.0, 1.0) < mutationRate) {
-                ind1.mutationSingleCustomerRerouting()
+                ind1_copy.mutationSingleCustomerRerouting()
             }
             if (Random.nextDouble(0.0, 1.0) < mutationRate) {
-                ind2.mutationSingleCustomerRerouting()
+                ind2_copy.mutationSingleCustomerRerouting()
             }
 
-            newPopulation.add(ind1)
-            newPopulation.add(ind2)
+            newPopulation.add(ind1_copy)
+            newPopulation.add(ind2_copy)
         }
 
         // INFO: The below loop modifies population and fitness lists
@@ -90,8 +99,14 @@ class Population(val problem: Problem, var populationSize: Int) {
         return population.maxBy { it.getFitness() }!!
     }
 
+    fun getAverageCost(): Double {
+        var sum = 0.0
+        population.forEach { sum += it.getCost() }
+        return sum/population.size
+    }
+
     fun printPop() {
         println("StartDepot, EndDepot, VehicleNumber, CustomerList")
-        population.forEach { println(it); it.printChromosone() }
+        population.forEach { println(it); it.printChromosome() }
     }
 }

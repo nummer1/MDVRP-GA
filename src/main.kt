@@ -7,28 +7,22 @@
 
 
 fun main(args: Array<String>) {
-    val p01 = Problem("data_files/p20")
-//    val s01 = Solution(p01)
-//    s01.fromFile("solution_files/p01.res")
-//    s01.toFile("test.txt")
-//    s01.draw()
-
-    val population = Population(p01, 1000)
+    val p01 = Problem("data_files/p09")
+    val population = Population(p01, 400)
     population.randomInitialization()
-//    val s02 = Solution(p01)
-//    s02.fromChromosome(population.population[0])
-//    population.printPop()
-//    s02.draw()
-//    s02.toFile("test.txt")
 
-    for (i in 0.until(1000)) {
+    println("Average:cost: ${population.getAverageCost()}")
+    println("Min:cost: ${population.getFittest().getCost()}")
+    var i = 0
+    while (true) {
+        population.createNewFitProp(0.0, 1.0, 4)
         println(i)
-        population.createNewFitProp(0.8, 0.1, 10)
+        println("Average:cost: ${population.getAverageCost()}")
+        println("Min:cost: ${population.getFittest().getCost()}")
+        val sol = Solution(p01)
+        sol.fromChromosome(population.getFittest())
+        sol.draw("solution.png")
+        sol.toFile("solution.txt")
+        i ++
     }
-
-    population.printPop()
-    val sol = Solution(p01)
-    sol.fromChromosome(population.getFittest())
-    sol.draw()
-    sol.toFile("test.txt")
 }

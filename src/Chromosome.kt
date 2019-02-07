@@ -1,3 +1,4 @@
+import kotlin.math.max
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -52,12 +53,63 @@ class Chromosome(private val problem: Problem) {
     private fun randomAssignCustomer(customer: Int) {
         // INFO: function never stalls, since can always assign customer to same route
         // remove customer from current route and randomly assign to other route
-        list.forEach { it.remove(customer) }
-        var listIndex = Random.nextInt(0, list.size)
-        while (getVehicleLoad(listIndex) + problem.customers[customer].quantityDemand > problem.maxVehicleLoad) {
-            if (listIndex == list.size-1) listIndex = 0; else listIndex += 1
+        list.forEach { if (it.contains(customer)) println("contains1") }
+        var assigned = false
+        var break_loop = false
+        var size = 0
+        list.forEach { size += it.size+1 }
+        var placeIndex = Random.nextInt(0, size)
+        for (i in 0.until(list.size)) {
+            for (j in 0.until(list[i].size+1)) {
+                if (placeIndex == 0) {
+                    if (getVehicleLoad(i) + problem.customers[customer].quantityDemand < problem.maxVehicleLoad) {
+                        list[i].add(j, customer)
+                        assigned = true
+                    }
+                    break_loop = true
+                    break
+                }
+                placeIndex--
+            }
+            if (break_loop) break
         }
-        list[listIndex].add(Random.nextInt(0, list[listIndex].size+1), customer)
+        if (!assigned) {
+            list.forEach { if (it.contains(customer)) println("contains2") }
+            var listIndex = Random.nextInt(0, list.size)
+            while (getVehicleLoad(listIndex) + problem.customers[customer].quantityDemand > problem.maxVehicleLoad) {
+                if (listIndex == list.size - 1) listIndex = 0; else listIndex += 1
+            }
+            list[listIndex].add(Random.nextInt(0, list[listIndex].size + 1), customer)
+        }
+    }
+
+    private fun bestAssignCustomer(customer: Int): Boolean {
+        // returns false if failed to insert customer
+        // INFO: customer must be removed before function is called to get valid chromosome
+        // add customer to best possible spot
+        // list.forEach { it.remove(customer) }
+        // list.forEach { if (it.contains(customer)) println("contains1") }
+        val possibleList: MutableList<Pair<Int, Int>> = mutableListOf()
+        val fitnessList: MutableList<Double> = mutableListOf()
+        for (i in 0.until(list.size)) {
+            for (j in 0.until(list[i].size + 1)) {
+                if (getVehicleLoad(i) + problem.customers[customer].quantityDemand < problem.maxVehicleLoad) {
+                    list[i].add(j, customer)
+                    possibleList.add(Pair(i, j))
+                    fitnessList.add(getFitness())
+                    list[i].removeAt(j)
+                }
+            }
+        }
+        // list.forEach { if (it.contains(customer)) println("contains2") }
+        if (possibleList.isEmpty()) {
+            // println(problem.customers[customer].quantityDemand)
+            return false
+        } else {
+            val maxIdx = fitnessList.indices.maxBy { fitnessList[it] }!!
+            list[possibleList[maxIdx].first].add(possibleList[maxIdx].second, customer)
+            return true
+        }
     }
 
     fun getClosestEndDepot(index: Int): Int {
@@ -90,31 +142,63 @@ class Chromosome(private val problem: Problem) {
     }
 
     fun randomInitialization() {
+        list.forEach { it.clear() }
         for (c in 0.until(problem.numberCustomers)) {
             var index = Random.nextInt(0, list.size)
+            val startIndex = index
             while (problem.customers[c].quantityDemand + getVehicleLoad(index) > problem.maxVehicleLoad) {
                 // TODO: if no route has capacity, this will go on indefinitely
                 if (index == list.size-1) index = 0; else index += 1
+                if (index == startIndex) {
+                    println("Chromosome.randomInitialization failed, not room on any routes")
+                    randomInitialization()
+                    break
+                }
             }
             list[index].add(c)
         }
     }
 
     fun copyOf(chromosome: Chromosome) {
+        // makes this a copy of chromosome
+        list.forEach { it.clear() }
         chromosome.list.forEachIndexed { index, l -> list[index].apply { addAll(l) } }
     }
 
-    fun crossoverRouteReassignment(p1: Chromosome, p2: Chromosome) {
-        // INFO: throws cncurrent modification exception when called p1 == p2
-        // TODO: best spot
+    fun crossoverRouteReassignment(parent2: Chromosome): Boolean {
+        // return false if failed
+        // INFO: throws concurrent modification exception when called p1 == p2
         // take random route from p1 = r1
         // take random route from p2 = r2
         // remove customers in r1 from p2 and r2 from p1
         // assign customers from r1 to random routes in p2 and vice versa
-        val r1 = p1.list.random()
-        val r2 = p2.list.random()
-        r1.forEach { p2.randomAssignCustomer(it) }
-        r2.forEach { p1.randomAssignCustomer(it) }
+        val r1 = this.list.random().toList()
+        val r2 = parent2.list.random().toList()
+        for (l in this.list) {
+            r2.forEach { l.remove(it) }
+        }
+        for (l in parent2.list) {
+            r1.forEach { l.remove(it) }
+        }
+        for (l in this.list) {
+            r2.forEach { if (l.contains(it)) println("contains3") }
+        }
+        for (l in parent2.list) {
+            r1.forEach { if (l.contains(it)) println("contains4") }
+        }
+//        p1.list.forEach { l -> r2.forEach { c -> l.remove(c) } }
+//        p2.list.forEach { l -> r1.forEach { c -> l.remove(c) } }
+        for (c in r2) {
+            if (!this.bestAssignCustomer(c)) {
+                return false
+            }
+        }
+        for (c in r1) {
+            if (!parent2.bestAssignCustomer(c)) {
+                return false
+            }
+        }
+        return true
     }
 
     fun mutationReverseSubroute() {
@@ -123,10 +207,10 @@ class Chromosome(private val problem: Problem) {
     }
 
     fun mutationSingleCustomerRerouting() {
-        // TODO: best spot
         // randomly select customer - insert at best spot
         val c1 = Random.nextInt(0, problem.numberCustomers)
-        randomAssignCustomer(c1)
+        list.forEach { it.remove(c1) }
+        bestAssignCustomer(c1) // always returns true, since can insert at same place
     }
 
     fun mutationSwapCustomers() {
@@ -147,7 +231,7 @@ class Chromosome(private val problem: Problem) {
         return 1/getCost()
     }
 
-    fun printChromosone() {
+    fun printChromosome() {
         for (index in 0.until(list.size)) {
             println("\t${getStartDepot(index)+1}, ${getClosestEndDepot(index)+1}, ${getVehicleNumber(index)+1}, ${list[index].map { it+1 }}")
         }

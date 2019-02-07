@@ -126,7 +126,7 @@ class Solution(val problem: Problem) {
         }
     }
 
-    fun draw() {
+    fun draw(fileName: String) {
 
         fun colorRectangle(_xStart: Int, _yStart: Int, _width: Int, _height: Int, hexColor: String, image: BufferedImage, useMiddle: Boolean=true) {
             var xStart = _xStart * 10
@@ -237,7 +237,7 @@ class Solution(val problem: Problem) {
             colorRectangle(d.xCoordinate-xMin+padding, d.yCoordinate-yMin+padding, 1, 1, "00FFFF", image)
         }
 
-        val outFile = File("test.png")
+        val outFile = File(fileName)
         ImageIO.write(image, "png", outFile)
     }
 }
