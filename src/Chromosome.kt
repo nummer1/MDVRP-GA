@@ -76,8 +76,10 @@ class Chromosome(private val problem: Problem) {
         if (!assigned) {
             list.forEach { if (it.contains(customer)) println("contains2") }
             var listIndex = Random.nextInt(0, list.size)
+            val startIndex = listIndex
             while (getVehicleLoad(listIndex) + problem.customers[customer].quantityDemand > problem.maxVehicleLoad) {
                 if (listIndex == list.size - 1) listIndex = 0; else listIndex += 1
+                if (startIndex==listIndex) println("failed Chromosome.randomAssignCustomer no routes with capacity")
             }
             list[listIndex].add(Random.nextInt(0, list[listIndex].size + 1), customer)
         }

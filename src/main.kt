@@ -7,7 +7,7 @@
 
 
 fun main(args: Array<String>) {
-    val p01 = Problem("data_files/p10")
+    val p01 = Problem("data_files/p08")
     val population = Population(p01, 400)
     population.randomInitialization()
 
