@@ -1,8 +1,8 @@
 import java.util.concurrent.Executors
 import java.util.concurrent.locks.ReentrantLock
-import kotlin.concurrent.thread
 import kotlin.concurrent.withLock
 import kotlin.random.Random
+
 
 class Population(val problem: Problem, var populationSize: Int) {
 

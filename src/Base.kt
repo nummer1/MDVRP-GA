@@ -57,7 +57,6 @@ class Problem (fileName: String) {
     val numberCustomers: Int
     val numberDepots: Int
     val maxVehicleLoad: Int
-    val maxRouteDuration: Int
     val customers: MutableList<Customer> = mutableListOf()
     val depots: MutableList<Depot> = mutableListOf()
 
@@ -80,7 +79,6 @@ class Problem (fileName: String) {
         }
 
         maxVehicleLoad = depots[0].maxVehicleLoad
-        maxRouteDuration = depots[0].maxRouteDuration
     }
 }
 

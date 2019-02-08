@@ -1,4 +1,3 @@
-import kotlin.math.max
 import kotlin.math.sqrt
 import kotlin.random.Random
 
@@ -55,7 +54,7 @@ class Chromosome(private val problem: Problem) {
         // remove customer from current route and randomly assign to other route
         list.forEach { if (it.contains(customer)) println("contains1") }
         var assigned = false
-        var break_loop = false
+        var breakLoop = false
         var size = 0
         list.forEach { size += it.size+1 }
         var placeIndex = Random.nextInt(0, size)
@@ -66,12 +65,12 @@ class Chromosome(private val problem: Problem) {
                         list[i].add(j, customer)
                         assigned = true
                     }
-                    break_loop = true
+                    breakLoop = true
                     break
                 }
                 placeIndex--
             }
-            if (break_loop) break
+            if (breakLoop) break
         }
         if (!assigned) {
             list.forEach { if (it.contains(customer)) println("contains2") }
@@ -112,6 +111,53 @@ class Chromosome(private val problem: Problem) {
             list[possibleList[maxIdx].first].add(possibleList[maxIdx].second, customer)
             return true
         }
+    }
+
+    fun fixChromosome(): Boolean {
+        // returns true if fix successful
+        var durSum = 0.0
+        var maxSum = 0.0
+        list.indices.forEach { maxSum += problem.depots[getStartDepot(it)].maxRouteDuration; durSum += getDuration(it) }
+        if (durSum >= maxSum) {
+            return false
+        }
+        val originalChromosome = Chromosome(problem)
+        originalChromosome.copyOf(this)
+        val reRouteCustomer = mutableListOf<Int>()
+        for (k in 0.until(list.size)) {
+            while (getDuration(k) > problem.depots[getStartDepot(k)].maxRouteDuration) {
+                val randCustIndex = Random.nextInt(0, list[k].size)
+                reRouteCustomer.add(list[k][randCustIndex])
+                list[k].removeAt(randCustIndex)
+            }
+        }
+
+        for (customer in reRouteCustomer) {
+            val possibleList: MutableList<Pair<Int, Int>> = mutableListOf()
+            val fitnessList: MutableList<Double> = mutableListOf()
+            for (i in 0.until(list.size)) {
+                for (j in 0.until(list[i].size + 1)) {
+                    if (getVehicleLoad(i) + problem.customers[customer].quantityDemand < problem.maxVehicleLoad) {
+                        list[i].add(j, customer)
+                        if (getDuration(i) < problem.depots[getStartDepot(i)].maxRouteDuration) {
+                            possibleList.add(Pair(i, j))
+                            fitnessList.add(getFitness())
+                        }
+                        list[i].removeAt(j)
+                    }
+                }
+            }
+            // list.forEach { if (it.contains(customer)) println("contains2") }
+            if (possibleList.isEmpty()) {
+                // println(problem.customers[customer].quantityDemand)
+                this.copyOf(originalChromosome)
+                return false
+            } else {
+                val maxIdx = fitnessList.indices.maxBy { fitnessList[it] }!!
+                list[possibleList[maxIdx].first].add(possibleList[maxIdx].second, customer)
+            }
+        }
+        return true
     }
 
     fun getClosestEndDepot(index: Int): Int {
