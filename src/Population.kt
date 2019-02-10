@@ -18,13 +18,42 @@ class Population(val problem: Problem, var populationSize: Int) {
         population.forEach { it.randomInitialization() }
     }
 
+    fun bestInitialization() {
+        val executor = Executors.newFixedThreadPool(8)
+        for (i in population.indices) {
+            val worker = Runnable {
+                population[i].bestInitialization(Double.MAX_VALUE)
+            }
+            executor.execute(worker)
+        }
+        executor.shutdown()
+        while (!executor.isTerminated) { }
+    }
+
+    fun initialization() {
+        // half best and half random
+        for (i in 0.until(population.size/2)) {
+            population[i].randomInitialization()
+        }
+        val executor = Executors.newFixedThreadPool(8)
+        for (i in (population.size/2).until(population.size)) {
+            val worker = Runnable {
+                population[i].bestInitialization(Double.MAX_VALUE, respectDuration = true)
+            }
+            executor.execute(worker)
+        }
+        executor.shutdown()
+        while (!executor.isTerminated) { }
+    }
+
     fun createNewFitProp(crossoverRate: Double, mutationRate: Double, elitistCount: Int) {
         // create new population based on fitness proportionate ranking
         val popLock = ReentrantLock()
         val newPopulation: MutableList<Chromosome> = mutableListOf()
         var totalFitness = 0.0
-        val cumulativeFitness = List(population.size) { val fit = population[it].getFitness(); totalFitness += fit; totalFitness }
-        val fitness = MutableList(population.size) { population[it].getFitness() }
+        val maxFitness = getMaxFitness()
+        val cumulativeFitness = List(population.size) { val fit = population[it].getFitness(maxFitness); totalFitness += fit; totalFitness }
+        val fitness = MutableList(population.size) { population[it].getFitness(maxFitness) }
 
         // TODO: use cumulative fitness array and binary search
 //        for (i in 0.until(populationSize/2)) {
@@ -67,18 +96,18 @@ class Population(val problem: Problem, var populationSize: Int) {
 
                 // do crossover
                 if (Random.nextDouble(0.0, 1.0) < crossoverRate) {
-                    if (!ind1_copy.crossoverRouteReassignment(ind2_copy)) {
-                        ind1_copy.randomInitialization()
-                        ind2_copy.randomInitialization()
+                    if (!ind1_copy.crossoverRouteReassignment(ind2_copy, maxFitness)) {
+                        ind1_copy.bestInitialization(maxFitness, respectDuration = Random.nextBoolean())
+                        ind2_copy.bestInitialization(maxFitness, respectDuration = Random.nextBoolean())
                     }
                 }
 
                 // do mutation
                 if (Random.nextDouble(0.0, 1.0) < mutationRate) {
-                    ind1_copy.mutationSingleCustomerRerouting()
+                    ind1_copy.mutationSingleCustomerRerouting(maxFitness)
                 }
                 if (Random.nextDouble(0.0, 1.0) < mutationRate) {
-                    ind2_copy.mutationSingleCustomerRerouting()
+                    ind2_copy.mutationSingleCustomerRerouting(maxFitness)
                 }
                 popLock.withLock { newPopulation.add(ind1_copy) }
                 popLock.withLock { newPopulation.add(ind2_copy) }
@@ -102,8 +131,13 @@ class Population(val problem: Problem, var populationSize: Int) {
         population = newPopulation
     }
 
+    fun getMaxFitness(): Double {
+        return population.maxBy { it.getCost() }!!.getCost() * 2
+    }
+
     fun getFittest(): Chromosome {
-        return population.maxBy { it.getFitness() }!!
+        val maxFitness = getMaxFitness()
+        return population.maxBy { it.getFitness(maxFitness) }!!
     }
 
     fun getAverageCost(): Double {

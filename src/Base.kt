@@ -4,9 +4,9 @@ import javax.imageio.ImageIO
 import kotlin.math.sqrt
 
 
-data class Customer(val customerNumber: Int, val xCoordinate: Int, val yCoordinate: Int, val serviceDuration: Int, val quantityDemand: Int)
+data class Customer(val customerNumber: Int, val xCoordinate: Int, val yCoordinate: Int, val serviceDuration: Double, val quantityDemand: Int)
 
-data class Depot(val maxRouteDuration: Int, val maxVehicleLoad: Int, val xCoordinate: Int, val yCoordinate: Int)
+data class Depot(val maxRouteDuration: Double, val maxVehicleLoad: Int, val xCoordinate: Int, val yCoordinate: Int)
 
 
 class Route(var startDepot: Int, var endDepot: Int, val vehicleNumber: Int, val customerList: MutableList<Int>, val problem: Problem) {
@@ -71,11 +71,11 @@ class Problem (fileName: String) {
 
         // for each depot
         for (i in 1..numberDepots) {
-            depots.add(Depot(list[i][0], list[i][1], list[i+numberCustomers+numberDepots][1], list[i+numberCustomers+numberDepots][2]))
+            depots.add(Depot(list[i][0].toDouble(), list[i][1], list[i+numberCustomers+numberDepots][1], list[i+numberCustomers+numberDepots][2]))
         }
         // for each customer
         for (i in numberDepots+1..numberDepots+numberCustomers) {
-            customers.add(Customer(list[i][0], list[i][1], list[i][2], list[i][3], list[i][4]))
+            customers.add(Customer(list[i][0], list[i][1], list[i][2], list[i][3].toDouble(), list[i][4]))
         }
 
         maxVehicleLoad = depots[0].maxVehicleLoad

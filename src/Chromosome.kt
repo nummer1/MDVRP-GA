@@ -26,7 +26,7 @@ class Chromosome(private val problem: Problem) {
         return coordinateList
     }
 
-    private fun getDuration(index: Int): Double {
+    fun getDuration(index: Int): Double {
         // returns duration of single route
         var duration = 0.0
         for (c in list[index]) {
@@ -84,7 +84,7 @@ class Chromosome(private val problem: Problem) {
         }
     }
 
-    private fun bestAssignCustomer(customer: Int): Boolean {
+    private fun bestAssignCustomer(customer: Int, maxFitness: Double): Boolean {
         // returns false if failed to insert customer
         // INFO: customer must be removed before function is called to get valid chromosome
         // add customer to best possible spot
@@ -97,7 +97,7 @@ class Chromosome(private val problem: Problem) {
                 if (getVehicleLoad(i) + problem.customers[customer].quantityDemand < problem.maxVehicleLoad) {
                     list[i].add(j, customer)
                     possibleList.add(Pair(i, j))
-                    fitnessList.add(getFitness())
+                    fitnessList.add(getFitness(maxFitness))
                     list[i].removeAt(j)
                 }
             }
@@ -121,6 +121,7 @@ class Chromosome(private val problem: Problem) {
         if (durSum >= maxSum) {
             return false
         }
+
         val originalChromosome = Chromosome(problem)
         originalChromosome.copyOf(this)
         val reRouteCustomer = mutableListOf<Int>()
@@ -134,14 +135,14 @@ class Chromosome(private val problem: Problem) {
 
         for (customer in reRouteCustomer) {
             val possibleList: MutableList<Pair<Int, Int>> = mutableListOf()
-            val fitnessList: MutableList<Double> = mutableListOf()
+            val costList: MutableList<Double> = mutableListOf()
             for (i in 0.until(list.size)) {
                 for (j in 0.until(list[i].size + 1)) {
                     if (getVehicleLoad(i) + problem.customers[customer].quantityDemand < problem.maxVehicleLoad) {
                         list[i].add(j, customer)
                         if (getDuration(i) < problem.depots[getStartDepot(i)].maxRouteDuration) {
                             possibleList.add(Pair(i, j))
-                            fitnessList.add(getFitness())
+                            costList.add(getCost())
                         }
                         list[i].removeAt(j)
                     }
@@ -153,8 +154,8 @@ class Chromosome(private val problem: Problem) {
                 this.copyOf(originalChromosome)
                 return false
             } else {
-                val maxIdx = fitnessList.indices.maxBy { fitnessList[it] }!!
-                list[possibleList[maxIdx].first].add(possibleList[maxIdx].second, customer)
+                val bestIdx = costList.indices.minBy { costList[it] }!!
+                list[possibleList[bestIdx].first].add(possibleList[bestIdx].second, customer)
             }
         }
         return true
@@ -190,6 +191,7 @@ class Chromosome(private val problem: Problem) {
     }
 
     fun randomInitialization() {
+        // initializes chromosome randomly
         list.forEach { it.clear() }
         for (c in 0.until(problem.numberCustomers)) {
             var index = Random.nextInt(0, list.size)
@@ -206,13 +208,52 @@ class Chromosome(private val problem: Problem) {
         }
     }
 
+    fun bestInitialization(maxFitness: Double, respectDuration: Boolean=true) {
+        // initializes chromosome with greedy algorithm
+        // initializes randomly if fail once
+        list.forEach { it.clear() }
+        val randomCustomerList = MutableList(problem.numberCustomers) { it }
+        randomCustomerList.shuffle()
+        for (customer in randomCustomerList) {
+            val possibleList: MutableList<Pair<Int, Int>> = mutableListOf()
+            val fitnessList: MutableList<Double> = mutableListOf()
+            for (i in 0.until(list.size)) {
+                for (j in 0.until(list[i].size + 1)) {
+                    if (getVehicleLoad(i) + problem.customers[customer].quantityDemand < problem.maxVehicleLoad) {
+                        list[i].add(j, customer)
+                        if (!respectDuration || problem.depots[getStartDepot(i)].maxRouteDuration == 0.0 || getDuration(i) < problem.depots[getStartDepot(i)].maxRouteDuration) {
+                            possibleList.add(Pair(i, j))
+                            fitnessList.add(getFitness(maxFitness))
+                        }
+                        list[i].removeAt(j)
+                    }
+                }
+            }
+            // list.forEach { if (it.contains(customer)) println("contains2") }
+            if (possibleList.isEmpty()) {
+                // println(problem.customers[customer].quantityDemand)
+                if (respectDuration) {
+                    println("Chromosome.bestInitialization failed, not room on any routes: tries without respecting duration")
+                    bestInitialization(maxFitness, respectDuration = false)
+                } else {
+                    println("Chromosome.bestInitialization failed, not room on any routes: tries random")
+                    randomInitialization()
+                }
+                break
+            } else {
+                val maxIdx = fitnessList.indices.maxBy { fitnessList[it] }!!
+                list[possibleList[maxIdx].first].add(possibleList[maxIdx].second, customer)
+            }
+        }
+    }
+
     fun copyOf(chromosome: Chromosome) {
         // makes this a copy of chromosome
         list.forEach { it.clear() }
         chromosome.list.forEachIndexed { index, l -> list[index].apply { addAll(l) } }
     }
 
-    fun crossoverRouteReassignment(parent2: Chromosome): Boolean {
+    fun crossoverRouteReassignment(parent2: Chromosome, maxFitness: Double): Boolean {
         // return false if failed
         // INFO: throws concurrent modification exception when called p1 == p2
         // take random route from p1 = r1
@@ -236,12 +277,12 @@ class Chromosome(private val problem: Problem) {
 //        p1.list.forEach { l -> r2.forEach { c -> l.remove(c) } }
 //        p2.list.forEach { l -> r1.forEach { c -> l.remove(c) } }
         for (c in r2) {
-            if (!this.bestAssignCustomer(c)) {
+            if (!this.bestAssignCustomer(c, maxFitness)) {
                 return false
             }
         }
         for (c in r1) {
-            if (!parent2.bestAssignCustomer(c)) {
+            if (!parent2.bestAssignCustomer(c, maxFitness)) {
                 return false
             }
         }
@@ -253,11 +294,11 @@ class Chromosome(private val problem: Problem) {
         // reverses a segment of a route
     }
 
-    fun mutationSingleCustomerRerouting() {
+    fun mutationSingleCustomerRerouting(maxFitness: Double) {
         // randomly select customer - insert at best spot
         val c1 = Random.nextInt(0, problem.numberCustomers)
         list.forEach { it.remove(c1) }
-        bestAssignCustomer(c1) // always returns true, since can insert at same place
+        bestAssignCustomer(c1, maxFitness) // always returns true, since can insert at same place
     }
 
     fun mutationSwapCustomers() {
@@ -274,9 +315,23 @@ class Chromosome(private val problem: Problem) {
         return cost
     }
 
-    fun getFitness(): Double {
-        return 1/getCost()
+    fun getFitness(maxFitness: Double): Double {
+        var fitness = maxFitness // f_max
+        for (i in list.indices) {
+            if (problem.depots[getStartDepot(i)].maxRouteDuration != 0.0 && getDuration(i) > problem.depots[getStartDepot(i)].maxRouteDuration) {
+                fitness -= (getDuration(i) - problem.depots[getStartDepot(i)].maxRouteDuration)
+            }
+        }
+        fitness -= getCost()
+        if (fitness < 0) {
+            println("WARNING: fitness smaller than 0 in Chromosome.getFitness")
+        }
+        return fitness
     }
+
+//    fun getFitnessNoMax(): Double {
+//        return 1/getCost()
+//    }
 
     fun printChromosome() {
         for (index in 0.until(list.size)) {

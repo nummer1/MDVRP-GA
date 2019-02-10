@@ -9,30 +9,16 @@
 
 
 fun main(args: Array<String>) {
-    val p01 = Problem("data_files/p15")
-    val population = Population(p01, 400)
-    population.randomInitialization()
-
-    println("Average:cost: ${population.getAverageCost()}")
-    println("Min:cost: ${population.getFittest().getCost()}")
-    var i = 0
-    while (true) {
-        population.createNewFitProp(0.8, 0.2, 4)
-        println(i)
-        println("Average:cost: ${population.getAverageCost()}")
-        val sol = Solution(p01)
-        val fittest = population.getFittest()
-        if (p01.depots[0].maxRouteDuration != 0) {
-            if (fittest.fixChromosome()) {
-                print("valid solution: ")
-            }
-        } else {
-            print("valid solution: ")
+    val problem = Problem("data_files/p03")
+    val ga = GA(problem)
+    val popSize = mutableListOf<Int>(1000, 1000, 1000, 400, 400, 400, 100, 100, 100)
+    val crossOverRate = mutableListOf<Double>(1.0, 0.8, 0.6, 1.0, 0.8, 0.6, 1.0, 0.8, 0.6)
+    for (j in 0.until(9)) {
+        ga.setVariables(popSize[j], 300, crossOverRate[j], 0.2)
+        println("NEW: ${popSize[j]}, ${crossOverRate[j]}")
+        for (i in 0.until(6)) {
+            ga.run()
+            println(i)
         }
-        println("Min:cost: ${fittest.getCost()}")
-        sol.fromChromosome(population.getFittest())
-        sol.draw("solution.png")
-        sol.toFile("solution.txt")
-        i ++
     }
 }
