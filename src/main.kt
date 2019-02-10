@@ -9,16 +9,8 @@
 
 
 fun main(args: Array<String>) {
-    val problem = Problem("data_files/p03")
+    val problem = Problem("data_files/p17")
     val ga = GA(problem)
-    val popSize = mutableListOf<Int>(1000, 1000, 1000, 400, 400, 400, 100, 100, 100)
-    val crossOverRate = mutableListOf<Double>(1.0, 0.8, 0.6, 1.0, 0.8, 0.6, 1.0, 0.8, 0.6)
-    for (j in 0.until(9)) {
-        ga.setVariables(popSize[j], 300, crossOverRate[j], 0.2)
-        println("NEW: ${popSize[j]}, ${crossOverRate[j]}")
-        for (i in 0.until(6)) {
-            ga.run()
-            println(i)
-        }
-    }
+    // ga.setVariables(popSize[j], 300, crossOverRate[j], 0.2)
+    ga.run()
 }

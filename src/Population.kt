@@ -30,20 +30,44 @@ class Population(val problem: Problem, var populationSize: Int) {
         while (!executor.isTerminated) { }
     }
 
-    fun initialization() {
-        // half best and half random
-        for (i in 0.until(population.size/2)) {
-            population[i].randomInitialization()
-        }
+    fun closestInitialization() {
         val executor = Executors.newFixedThreadPool(8)
-        for (i in (population.size/2).until(population.size)) {
+        for (i in population.indices) {
             val worker = Runnable {
-                population[i].bestInitialization(Double.MAX_VALUE, respectDuration = true)
+                population[i].closestInitialization(Double.MAX_VALUE)
             }
             executor.execute(worker)
         }
         executor.shutdown()
         while (!executor.isTerminated) { }
+    }
+
+    fun initialization() {
+        // half best and half random
+        for (i in 0.until(population.size/3)) {
+            population[i].randomInitialization()
+        }
+        val executor = Executors.newFixedThreadPool(8)
+        for (i in (population.size/3).until(population.size/3*2)) {
+            val worker = Runnable {
+                population[i].bestInitialization(Double.MAX_VALUE, respectDuration = true)
+            }
+            executor.execute(worker)
+        }
+        for (j in (population.size/3*2).until(population.size)) {
+            val worker = Runnable {
+                population[j].closestInitialization(Double.MAX_VALUE, respectDuration = true)
+            }
+            executor.execute(worker)
+        }
+        executor.shutdown()
+        while (!executor.isTerminated) { }
+
+        // population.last().closestInitialization(Double.MAX_VALUE, respectDuration = true)
+
+        for (chrome in population) {
+            chrome.checkContainsEveryCustomer()
+        }
     }
 
     fun createNewFitProp(crossoverRate: Double, mutationRate: Double, elitistCount: Int) {
@@ -98,7 +122,7 @@ class Population(val problem: Problem, var populationSize: Int) {
                 if (Random.nextDouble(0.0, 1.0) < crossoverRate) {
                     if (!ind1_copy.crossoverRouteReassignment(ind2_copy, maxFitness)) {
                         ind1_copy.bestInitialization(maxFitness, respectDuration = Random.nextBoolean())
-                        ind2_copy.bestInitialization(maxFitness, respectDuration = Random.nextBoolean())
+                        ind2_copy.closestInitialization(maxFitness, respectDuration = Random.nextBoolean())
                     }
                 }
 

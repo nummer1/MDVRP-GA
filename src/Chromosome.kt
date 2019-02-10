@@ -247,6 +247,48 @@ class Chromosome(private val problem: Problem) {
         }
     }
 
+    fun closestInitialization(maxFitness: Double, respectDuration: Boolean=true) {
+        // take customer closest to depot, then continue until route is full
+        list.forEach { it.clear() }
+        val remainingCustomers = MutableList(problem.numberCustomers) { it }
+        remainingCustomers.shuffle()
+        for (i in list.indices.shuffled()) {
+            while (true) {
+                val prevX = if (list[i].isEmpty()) problem.depots[getStartDepot(i)].xCoordinate else problem.customers[list[i].last()].xCoordinate
+                val prevY = if (list[i].isEmpty()) problem.depots[getStartDepot(i)].yCoordinate else problem.customers[list[i].last()].yCoordinate
+                val possibleCustomers = mutableListOf<Int>()
+                val nextDurationList = mutableListOf<Double>()
+                for (c in remainingCustomers) {
+                    if (getVehicleLoad(i) + problem.customers[c].quantityDemand < problem.maxVehicleLoad) {
+                        list[i].add(c)
+                        if (!respectDuration || problem.depots[getStartDepot(i)].maxRouteDuration == 0.0 || getDuration(i) < problem.depots[getStartDepot(i)].maxRouteDuration) {
+                            possibleCustomers.add(c)
+                            val customer = problem.customers[c]
+                            nextDurationList.add(getDistance(prevX, customer.xCoordinate, prevY, customer.yCoordinate))
+                        }
+                        list[i].remove(c)
+                    }
+                }
+                if (possibleCustomers.isEmpty()) {
+                    break
+                } else {
+                    val minIdx = nextDurationList.indices.minBy { nextDurationList[it] }!!
+                    list[i].add(possibleCustomers[minIdx])
+                    remainingCustomers.remove(possibleCustomers[minIdx])
+                }
+            }
+        }
+        if (!remainingCustomers.isEmpty()) {
+            if (respectDuration) {
+                println("Chromosome.closestInitialization failed, not room on any routes: tries without respecting duration")
+                closestInitialization(maxFitness, respectDuration = false)
+            } else {
+                println("Chromosome.closestInitialization failed, not room on any routes: tries random")
+                randomInitialization()
+            }
+        }
+    }
+
     fun copyOf(chromosome: Chromosome) {
         // makes this a copy of chromosome
         list.forEach { it.clear() }
@@ -332,6 +374,23 @@ class Chromosome(private val problem: Problem) {
 //    fun getFitnessNoMax(): Double {
 //        return 1/getCost()
 //    }
+
+    fun checkContainsEveryCustomer(): Boolean {
+        for (c in 0.until(problem.numberCustomers)) {
+            var contains = false
+            for (l in list) {
+                if (l.contains(c)) {
+                    contains = true
+                    break
+                }
+            }
+            if (!contains) {
+                println("ERROR: Chromosome does not contain all customers")
+                return false
+            }
+        }
+        return true
+    }
 
     fun printChromosome() {
         for (index in 0.until(list.size)) {

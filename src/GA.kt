@@ -14,9 +14,9 @@ import java.io.File
 
 class GA(val problem: Problem) {
 
-    var populationSize = 500
+    var populationSize = 400
     var generationNumber = Int.MAX_VALUE
-    var crossoverRate = 1.0
+    var crossoverRate = 0.9
     var mutationRate = 0.2
     var elitistCount = 10
 
